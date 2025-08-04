@@ -1,0 +1,162 @@
+diff --git a/src/ACME/Bundle/CMSBundle/ACMECMSBundle.php b/src/ACME/Bundle/CMSBundle/ACMECMSBundle.php
+new file mode 100644
+index 0000000..c48eb46
+--- /dev/null
++++ b/src/ACME/Bundle/CMSBundle/ACMECMSBundle.php
+@@ -0,0 +1,9 @@
++<?php
++
++namespace ACME\Bundle\CMSBundle;
++
++use Symfony\Component\HttpKernel\Bundle\Bundle;
++
++class ACMECMSBundle extends Bundle
++{
++}
+diff --git a/src/ACME/Bundle/CMSBundle/DependencyInjection/ACMECMSExtension.php b/src/ACME/Bundle/CMSBundle/DependencyInjection/ACMECMSExtension.php
+new file mode 100644
+index 0000000..c49f0b2
+--- /dev/null
++++ b/src/ACME/Bundle/CMSBundle/DependencyInjection/ACMECMSExtension.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace ACME\Bundle\CMSBundle\DependencyInjection;
++
++use Symfony\Component\Config\FileLocator;
++use Symfony\Component\DependencyInjection\ContainerBuilder;
++use Symfony\Component\DependencyInjection\Loader;
++use Symfony\Component\HttpKernel\DependencyInjection\Extension;
++
++class ACMECMSExtension extends Extension
++{
++    /**
++     * @throws \Exception
++     */
++    #[\Override] public function load(array $configs, ContainerBuilder $container): void
++    {
++        $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
++
++        $loader->load('form_types.yml');
++    }
++}
+diff --git a/src/ACME/Bundle/CMSBundle/Form/Extension/PageTypeExtension.php b/src/ACME/Bundle/CMSBundle/Form/Extension/PageTypeExtension.php
+new file mode 100644
+index 0000000..47e3fd0
+--- /dev/null
++++ b/src/ACME/Bundle/CMSBundle/Form/Extension/PageTypeExtension.php
+@@ -0,0 +1,29 @@
++<?php
++
++namespace ACME\Bundle\CMSBundle\Form\Extension;
++
++use Oro\Bundle\CMSBundle\Form\Type\PageType;
++use Symfony\Component\Form\AbstractTypeExtension;
++use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
++use Symfony\Component\Form\FormBuilderInterface;
++
++class PageTypeExtension extends AbstractTypeExtension
++{
++    #[\Override] public static function getExtendedTypes(): iterable
++    {
++        return [PageType::class];
++    }
++
++    #[\Override] public function buildForm(FormBuilderInterface $builder, array $options): void
++    {
++        if ($builder->has('doNotRenderTitle')) {
++            $builder->remove('doNotRenderTitle');
++            $builder->add('doNotRenderTitle', CheckboxType::class, [
++                'label' => 'oro.cms.page.do_not_render_title.label',
++                'tooltip' => 'oro.cms.page.do_not_render_title.tooltip',
++                'required' => false,
++                'data' => true, // customization
++            ]);
++        }
++    }
++}
+diff --git a/src/ACME/Bundle/CMSBundle/Migrations/Schema/v1_0/AddFieldForPage.php b/src/ACME/Bundle/CMSBundle/Migrations/Schema/v1_0/AddFieldForPage.php
+new file mode 100644
+index 0000000..218824d
+--- /dev/null
++++ b/src/ACME/Bundle/CMSBundle/Migrations/Schema/v1_0/AddFieldForPage.php
+@@ -0,0 +1,39 @@
++<?php
++
++namespace ACME\Bundle\CMSBundle\Migrations\Schema\v1_0;
++
++use Doctrine\DBAL\Schema\Schema;
++use Doctrine\DBAL\Types\Types;
++use ACME\Bundle\ConfigurationBundle\Migration\DefaultOroOptionsTrait;
++use Oro\Bundle\EntityBundle\EntityConfig\DatagridScope;
++use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
++use Oro\Bundle\MigrationBundle\Migration\Migration;
++use Oro\Bundle\MigrationBundle\Migration\QueryBag;
++
++class AddFieldForPage implements Migration
++{
++    use DefaultOroOptionsTrait;
++
++    /**
++     * @throws \Doctrine\DBAL\Schema\SchemaException
++     */
++    #[\Override] public function up(Schema $schema, QueryBag $queries): void
++    {
++        $table = $schema->getTable('oro_cms_page');
++
++        $table->addColumn(
++            'use_banner_as_header_background',
++            Types::BOOLEAN, [
++                'default' => true,
++                'oro_options' => [
++                    'extend' => ['is_extend' => true, 'owner' => ExtendScope::OWNER_CUSTOM],
++                    'datagrid' => ['is_visible' => DatagridScope::IS_VISIBLE_HIDDEN],
++                    'view' => ['is_displayable' => true],
++                    'form' => ['is_enabled' => true],
++                    'merge' => ['display' => false],
++                    'dataaudit' => ['auditable' => false]
++                ]
++            ]
++        );
++    }
++}
+diff --git a/src/ACME/Bundle/CMSBundle/Resources/config/form_types.yml b/src/ACME/Bundle/CMSBundle/Resources/config/form_types.yml
+new file mode 100644
+index 0000000..f3ab459
+--- /dev/null
++++ b/src/ACME/Bundle/CMSBundle/Resources/config/form_types.yml
+@@ -0,0 +1,4 @@
++services:
++    ACME\Bundle\CMSBundle\Form\Extension\PageTypeExtension:
++        tags:
++            -   name: form.type_extension
+diff --git a/src/ACME/Bundle/CMSBundle/Resources/config/oro/bundles.yml b/src/ACME/Bundle/CMSBundle/Resources/config/oro/bundles.yml
+new file mode 100644
+index 0000000..3f98269
+--- /dev/null
++++ b/src/ACME/Bundle/CMSBundle/Resources/config/oro/bundles.yml
+@@ -0,0 +1,2 @@
++bundles:
++    - { name: ACME\Bundle\CMSBundle\ACMECMSBundle, priority: 1000 }
+diff --git a/src/ACME/Bundle/CMSBundle/Resources/translations/messages.en.yml b/src/ACME/Bundle/CMSBundle/Resources/translations/messages.en.yml
+new file mode 100644
+index 0000000..1aa724d
+--- /dev/null
++++ b/src/ACME/Bundle/CMSBundle/Resources/translations/messages.en.yml
+@@ -0,0 +1,4 @@
++oro.cms:
++    page:
++        use_banner_as_header_background:
++            label: 'Use banner as a header background'
+diff --git a/src/ACME/Bundle/ThemeBundle/Resources/views/layouts/acme/oro_cms_frontend_page_view/layout.yml b/src/ACME/Bundle/ThemeBundle/Resources/views/layouts/acme/oro_cms_frontend_page_view/layout.yml
+new file mode 100644
+index 0000000..1ef3056
+--- /dev/null
++++ b/src/ACME/Bundle/ThemeBundle/Resources/views/layouts/acme/oro_cms_frontend_page_view/layout.yml
+@@ -0,0 +1,6 @@
++layout:
++    actions:
++        - '@setOption':
++            id: body
++            optionName: attr.class
++            optionValue: '=data["page"].getUseBannerAsHeaderBackground() ? "cms-page-body header-banner" : "cms-page-body"'
