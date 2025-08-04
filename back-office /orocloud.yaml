@@ -1,0 +1,5 @@
+# OroCloud config for all environments ("uat", "stag", "prod").
+# See https://doc.oroinc.com/cloud/maintenance/advanced-use/ for documentation.
+orocloud_options:
+    application:
+        web_backend_prefix: '/backoffice-custom' # Use custom prefix for back-office
